@@ -42,7 +42,7 @@
   /* ---------- main ---------- */
   .main{flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
   .hbar{background:var(--maroon);color:#fff;padding:16px 30px;display:flex;align-items:center;
-    justify-content:space-between;gap:20px;flex-wrap:wrap}
+    justify-content:space-between;gap:20px;flex-wrap:wrap;flex:none}
   .hbar h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
   .hbar .tag{font-size:12px;color:#f3d9de;margin-top:2px}
   .hbar .asof{font-size:11.5px;color:#f0cdd3;text-align:right;line-height:1.5}
@@ -132,6 +132,7 @@
   tbody tr:hover{background:var(--panel2)}
   .acc-nm{font-weight:600}
   .acc-id{font-size:11px;color:var(--mut2);font-family:ui-monospace,monospace;margin-top:2px}
+  .acc-sm-meta{display:none}   /* shown only <768px: product · region + stacked triggers */
   .muted{color:var(--mut)}
   .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:7px;font-weight:700;font-size:12.5px}
   .badge .sc{font-variant-numeric:tabular-nums}
@@ -155,9 +156,11 @@
   /* ---------- drawer ---------- */
   .scrim{position:fixed;inset:0;background:rgba(35,30,25,.4);opacity:0;pointer-events:none;transition:.18s;z-index:40}
   .scrim.open{opacity:1;pointer-events:auto}
-  .drawer{position:fixed;top:0;right:0;height:100vh;width:580px;max-width:95vw;background:var(--panel);
+  /* viewport-sized clip so the off-screen (closed) drawer can't widen the page */
+  .drawer-wrap{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:50}
+  .drawer{position:absolute;top:0;right:0;height:100%;width:580px;max-width:95vw;background:var(--panel);
     border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);
-    z-index:50;overflow-y:auto;box-shadow:-16px 0 48px rgba(35,30,25,.16)}
+    overflow-y:auto;pointer-events:auto;box-shadow:-16px 0 48px rgba(35,30,25,.16)}
   .drawer.open{transform:translateX(0)}
   .dh{position:sticky;top:0;background:var(--maroon);color:#fff;padding:20px 24px;z-index:2}
   .dh .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
@@ -265,7 +268,7 @@
   /* mobile tab bar — the sidebar (which holds the tabs) is hidden below 1100px,
      so this becomes the tab navigation on tablet/phone */
   .mtabs{display:none}
-  .mtab{flex:1;min-width:max-content;padding:11px 14px;border:1px solid var(--line);border-radius:9px;
+  .mtab{flex:1 1 0;text-align:center;padding:11px 12px;border:1px solid var(--line);border-radius:9px;
     background:var(--panel);color:var(--ink2);font-weight:700;font-size:13px;font-family:var(--font);
     cursor:pointer;white-space:nowrap}
   .mtab.active{background:var(--maroon);border-color:var(--maroon);color:#fff}
@@ -274,7 +277,7 @@
     .kpis{grid-template-columns:repeat(2,1fr)}
     .grid2,.grid3{grid-template-columns:1fr}
     .sidebar{display:none}
-    .mtabs{display:flex;gap:8px;position:sticky;top:0;z-index:20;
+    .mtabs{display:flex;gap:8px;flex:none;position:sticky;top:0;z-index:20;
       padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto}
     .tablewrap{overflow-x:auto}
     .tablewrap table{min-width:680px}
@@ -284,6 +287,14 @@
     .hbar{padding:14px 16px}
     .kpis{gap:10px}
     .kpi .v{font-size:22px}
+    /* watchlist: hide secondary columns, stack product/region/triggers under the name */
+    .hide-sm{display:none}
+    .acc-sm-meta{display:block;margin-top:6px;font-size:11.5px;color:var(--mut);font-weight:400}
+    .acc-sm-meta .sm-prod{color:var(--ink2);font-weight:600}
+    .trigs-sm{margin-top:5px}
+    .tablewrap table{min-width:0}
+    #view-watchlist thead th,#view-watchlist tbody td{padding:11px 9px}
+    .action{white-space:normal}
     /* drill-down becomes a full-screen overlay */
     .drawer{width:100vw;max-width:100vw;border-left:none}
     .dh{padding:16px 16px}
@@ -325,7 +336,7 @@
   </div>
 
   <div class="mtabs" id="mtabs">
-    <button class="mtab active" data-tab="overview">Portfolio overview</button>
+    <button class="mtab active" data-tab="overview">Overview</button>
     <button class="mtab" data-tab="watchlist">Watchlist</button>
   </div>
 
@@ -337,7 +348,7 @@
 </main>
 
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer"></aside>
+<div class="drawer-wrap"><aside class="drawer" id="drawer"></aside></div>
 <div class="toast" id="toast"><span class="tick">✓</span><span id="toast-msg"></span></div>
 
 <script>
@@ -635,9 +646,9 @@ function chipRow(){
       </div></div>`;
 }
 const COLS=[
-  {key:"name",label:"Account"},{key:"product",label:"Product"},{key:"industry",label:"Industry"},{key:"region",label:"Region"},
+  {key:"name",label:"Account"},{key:"product",label:"Product",sm:1},{key:"industry",label:"Industry",sm:1},{key:"region",label:"Region",sm:1},
   {key:"exposure",label:"Exposure",num:true},{key:"score",label:"Score",num:true},
-  {key:"trigs",label:"Top triggers",nosort:true},{key:"action",label:"Recommended action",nosort:true},
+  {key:"trigs",label:"Top triggers",nosort:true,sm:1},{key:"action",label:"Recommended action",nosort:true},
 ];
 const NCOLS=COLS.length;
 function sortVal(x,key){
@@ -651,7 +662,7 @@ function renderWatchlist(){
   document.getElementById("view-watchlist").innerHTML=chipRow()+`
     <div class="tablewrap"><table><thead><tr>${COLS.map(c=>{
       const on=sort.key===c.key;
-      return `<th class="${c.num?"num":""} ${c.nosort?"nosort":""} ${on?"sorted":""}" ${c.nosort?"":`data-sort="${c.key}"`}>${c.label}${c.nosort?"":`<span class="arr">${on?(sort.dir<0?"▼":"▲"):"↕"}</span>`}</th>`;
+      return `<th class="${c.num?"num":""} ${c.nosort?"nosort":""} ${c.sm?"hide-sm":""} ${on?"sorted":""}" ${c.nosort?"":`data-sort="${c.key}"`}>${c.label}${c.nosort?"":`<span class="arr">${on?(sort.dir<0?"▼":"▲"):"↕"}</span>`}</th>`;
     }).join("")}</tr></thead><tbody id="rows"></tbody></table></div>
     <div class="count-note" id="countnote"></div>
     <div class="weights-note" id="weights"></div>`;
@@ -679,13 +690,14 @@ function renderRows(){
     const trg=topTriggers(S).map(t=>`<div class="trig">${t.label}</div>`).join("")||`<div class="trig muted">combined mild signals</div>`;
     const pd=x.curDpd===0?`<span class="pd-tag">PRE-DELINQ</span>`:"";
     return `<tr data-id="${a.account_id}" class="${isAct?"row-actioned":""}">
-      <td><div class="acc-nm">${a.borrower_name}${pd}</div><div class="acc-id">${a.account_id} · ${a.channel}</div></td>
-      <td class="muted">${a.product_type}</td>
-      <td class="muted">${a.industry}</td>
-      <td class="muted">${a.region}</td>
+      <td><div class="acc-nm">${a.borrower_name}${pd}</div><div class="acc-id">${a.account_id} · ${a.channel}</div>
+        <div class="acc-sm-meta"><span class="sm-prod">${a.product_type}</span> · ${a.region}<div class="trigs-sm">${trg}</div></div></td>
+      <td class="muted hide-sm">${a.product_type}</td>
+      <td class="muted hide-sm">${a.industry}</td>
+      <td class="muted hide-sm">${a.region}</td>
       <td class="num">${inr(a.outstanding_exposure)}</td>
       <td><span class="badge ${badgeCls[x.band]}"><span class="sc">${S.score}</span> ${x.band.toUpperCase()}</span></td>
-      <td>${trg}</td>
+      <td class="hide-sm">${trg}</td>
       <td>${isAct?`<span class="done-tag">✓ Actioned</span>`:`<span class="action ${cp.cls}">${cp.action}</span>`}</td>
     </tr>`;
   }).join("")+(list.length>400?`<tr><td colspan="${NCOLS}" class="empty">+ ${list.length-400} more — refine with search or filters.</td></tr>`:"");
