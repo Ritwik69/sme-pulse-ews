@@ -1,0 +1,982 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SME Pulse — Early Warning System</title>
+<script src="data.js"></script>
+<style>
+  :root{
+    --bg:#f4f1ea; --panel:#ffffff; --panel2:#faf8f3; --line:#e6e0d5; --line2:#efe9de;
+    --ink:#23262d; --ink2:#4a4f5a; --mut:#7b8090; --mut2:#a2a6b2;
+    --maroon:#A32638; --maroon-d:#87202f; --maroon-bg:#fbeaec;
+    --gold:#b07d12; --gold-bg:#f8f0dc; --gold-line:#e6cf9a;
+    --watch:#4a6076; --watch-bg:#eaeef3;
+    --green:#2f7d52;
+    --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --shadow:0 1px 2px rgba(30,26,20,.04),0 2px 8px rgba(30,26,20,.04);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.45;
+    -webkit-font-smoothing:antialiased;display:flex;overflow:hidden}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{width:236px;flex:none;background:#fff;border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:20px 16px;height:100vh}
+  .brand{display:flex;align-items:center;gap:11px;padding:2px 6px 4px}
+  .brand .logo{width:36px;height:36px;border-radius:9px;background:var(--maroon);
+    display:grid;place-items:center;font-weight:800;font-size:17px;color:#fff}
+  .brand .nm{font-weight:700;font-size:15.5px;letter-spacing:.2px;color:var(--maroon)}
+  .brand .sub{font-size:11px;color:var(--mut);margin-top:1px}
+  .nav{margin-top:22px;display:flex;flex-direction:column;gap:2px}
+  .nav .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--mut2);margin:16px 8px 6px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:8px;color:var(--ink2);
+    text-decoration:none;font-size:13px;font-weight:500;cursor:pointer;user-select:none}
+  .nav a:hover{background:var(--panel2)}
+  .nav a.active{background:var(--maroon-bg);color:var(--maroon);font-weight:600}
+  .nav a .dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.65}
+  .sidebar .foot{margin-top:auto;font-size:11px;color:var(--mut);border-top:1px solid var(--line);padding:14px 8px 2px}
+  .sidebar .foot b{color:var(--ink2);font-weight:600}
+
+  /* ---------- main ---------- */
+  .main{flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+  .hbar{background:var(--maroon);color:#fff;padding:16px 30px;display:flex;align-items:center;
+    justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .hbar h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
+  .hbar .tag{font-size:12px;color:#f3d9de;margin-top:2px}
+  .hbar .asof{font-size:11.5px;color:#f0cdd3;text-align:right;line-height:1.5}
+  .content{padding:24px 30px 60px}
+
+  /* ---------- kpis ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 17px;box-shadow:var(--shadow)}
+  .kpi .k{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+  .kpi .v{font-size:27px;font-weight:750;margin-top:8px;letter-spacing:-.5px;line-height:1}
+  .kpi .v small{font-size:14px;font-weight:600;color:var(--mut)}
+  .kpi .sub{font-size:11.5px;color:var(--mut);margin-top:7px}
+  .kpi .sub .r{color:var(--maroon);font-weight:700}
+  .kpi .sub .a{color:var(--gold);font-weight:700}
+  .kpi.risk .v{color:var(--maroon)}
+
+  /* ---------- overview cards ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+  .grid3{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 3px;font-size:14px;font-weight:700}
+  .card .cs{font-size:11.5px;color:var(--mut);margin-bottom:16px}
+
+  /* trend bars */
+  .trend{display:flex;align-items:flex-end;gap:14px;height:150px;padding-top:8px}
+  .trend .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+  .trend .bars{width:60%;max-width:42px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden;position:relative}
+  .trend .seg-red{background:var(--maroon)}
+  .trend .seg-oth{background:var(--gold-line)}
+  .trend .val{font-size:11px;font-weight:700;color:var(--ink2)}
+  .trend .mo{font-size:10.5px;color:var(--mut)}
+  .legend{display:flex;gap:16px;margin-top:14px;font-size:11.5px;color:var(--mut)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+  /* horizontal bar list */
+  .hbars{display:flex;flex-direction:column;gap:11px}
+  .hrow{display:grid;grid-template-columns:130px 1fr 74px;align-items:center;gap:10px;font-size:12.5px}
+  .hrow .nm{color:var(--ink2);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hrow .track{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;height:16px;overflow:hidden}
+  .hrow .fill{height:100%;background:var(--maroon);border-radius:5px}
+  .hrow .amt{text-align:right;color:var(--ink2);font-weight:600;font-variant-numeric:tabular-nums}
+
+  /* channel */
+  .chan{display:flex;gap:14px}
+  .chan .c{flex:1;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:14px;text-align:center}
+  .chan .c .n{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .chan .c .p{font-size:24px;font-weight:750;margin:6px 0 2px;color:var(--maroon)}
+  .chan .c .d{font-size:11px;color:var(--mut)}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink2);font-size:12.5px;font-weight:600;cursor:pointer;user-select:none}
+  .chip:hover{border-color:var(--mut2)}
+  .chip.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+  .chip.on.amber{background:var(--gold);border-color:var(--gold)}
+  .chip.on.watch{background:var(--watch);border-color:var(--watch)}
+  .chip .n{opacity:.7;font-weight:500;margin-left:3px}
+  .chip.predelinq{border:1.5px solid var(--gold);color:var(--gold);background:var(--gold-bg);
+    display:inline-flex;align-items:center;gap:6px}
+  .chip.predelinq::before{content:"◆";font-size:10px}
+  .chip.predelinq.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+  .chip.actioned.on{background:var(--green);border-color:var(--green);color:#fff}
+  .search{margin-left:auto;position:relative}
+  .search input{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--ink);
+    padding:9px 13px 9px 34px;font-size:13px;width:270px;font-family:var(--font)}
+  .search input:focus{outline:none;border-color:var(--maroon)}
+  .search svg{position:absolute;left:10px;top:9px;stroke:var(--mut2)}
+
+  /* ---------- table ---------- */
+  .tablewrap{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);
+    font-weight:700;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);white-space:nowrap;
+    cursor:pointer;user-select:none}
+  thead th.num{text-align:right}
+  thead th.nosort{cursor:default}
+  thead th .arr{opacity:.4;font-size:9px;margin-left:3px}
+  thead th.sorted{color:var(--maroon)}
+  thead th.sorted .arr{opacity:1}
+  tbody td{padding:12px 16px;border-bottom:1px solid var(--line2);vertical-align:middle}
+  tbody td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:var(--panel2)}
+  .acc-nm{font-weight:600}
+  .acc-id{font-size:11px;color:var(--mut2);font-family:ui-monospace,monospace;margin-top:2px}
+  .muted{color:var(--mut)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:7px;font-weight:700;font-size:12.5px}
+  .badge .sc{font-variant-numeric:tabular-nums}
+  .b-red{background:var(--maroon-bg);color:var(--maroon)}
+  .b-amber{background:var(--gold-bg);color:var(--gold)}
+  .b-watch{background:var(--watch-bg);color:var(--watch)}
+  .pd-tag{display:inline-block;margin-left:6px;font-size:9.5px;font-weight:700;color:var(--gold);
+    border:1px solid var(--gold-line);border-radius:4px;padding:1px 4px;vertical-align:middle}
+  .trigs{display:flex;flex-direction:column;gap:3px}
+  .trig{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+  .trig::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--mut2);flex:none}
+  .action{font-size:12.5px;font-weight:600}
+  .a-restr{color:var(--maroon)} .a-esc{color:var(--gold)} .a-nudge{color:var(--watch)} .a-watch{color:var(--mut)}
+  .row-actioned td{opacity:.55}
+  .done-tag{font-size:10px;font-weight:700;color:var(--green);border:1px solid #bfe0cc;background:#eef7f1;border-radius:5px;padding:2px 7px}
+  .empty{padding:40px;text-align:center;color:var(--mut2)}
+  .count-note{font-size:12px;color:var(--mut);margin:12px 2px 0}
+  .weights-note{font-size:11px;color:var(--mut);margin-top:10px;line-height:1.5}
+  .weights-note b{color:var(--ink2)}
+
+  /* ---------- drawer ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(35,30,25,.4);opacity:0;pointer-events:none;transition:.18s;z-index:40}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:580px;max-width:95vw;background:var(--panel);
+    border-left:1px solid var(--line);transform:translateX(100%);transition:transform .22s cubic-bezier(.4,0,.2,1);
+    z-index:50;overflow-y:auto;box-shadow:-16px 0 48px rgba(35,30,25,.16)}
+  .drawer.open{transform:translateX(0)}
+  .dh{position:sticky;top:0;background:var(--maroon);color:#fff;padding:20px 24px;z-index:2}
+  .dh .row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .dh h2{margin:0;font-size:18px;font-weight:700}
+  .dh .id{font-size:12px;color:#f0cdd3;font-family:ui-monospace,monospace;margin-top:3px}
+  .dh .tags{margin-top:10px;display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+  .tag{font-size:11px;color:#fff;background:rgba(255,255,255,.16);padding:3px 9px;border-radius:6px}
+  .dh .badge{background:#fff}
+  .close{background:rgba(255,255,255,.16);border:none;color:#fff;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;flex:none}
+  .close:hover{background:rgba(255,255,255,.28)}
+  .db{padding:22px 24px}
+  .sec-t{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:700;margin:24px 0 12px;
+    display:flex;align-items:center;justify-content:space-between}
+  .sec-t:first-child{margin-top:0}
+  .facts{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+  .fact .l{font-size:11px;color:var(--mut)}
+  .fact .v{font-size:14px;font-weight:600;margin-top:2px}
+  .cover-ok{color:var(--green)} .cover-thin{color:var(--maroon)}
+
+  .spark{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:14px 16px}
+  .spark .cap{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);margin-bottom:8px}
+  .spark svg{display:block;width:100%;height:auto;overflow:visible}
+
+  /* phase-2 roadmap (display-only, collapsed) */
+  .roadmap{margin-top:8px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .roadmap>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:12px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.5px;color:var(--mut);display:flex;align-items:center;gap:8px}
+  .roadmap>summary::-webkit-details-marker{display:none}
+  .roadmap>summary::before{content:"▸";font-size:10px;transition:transform .15s;color:var(--mut2)}
+  .roadmap[open]>summary::before{transform:rotate(90deg)}
+  .roadmap .rlist{padding:0 14px 10px}
+  .rrow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px dashed var(--line2);font-size:12.5px;color:var(--mut2)}
+  .rrow .rn{flex:1}.rrow .rn b{color:var(--mut);font-weight:600}
+  .coming{font-size:9px;font-weight:800;letter-spacing:.5px;color:var(--gold);border:1px solid var(--gold-line);
+    background:var(--gold-bg);border-radius:5px;padding:2px 6px;text-transform:uppercase;flex:none}
+  .covcard{margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .covcard .lbl{font-weight:700;font-size:13px}
+  .covcard .txt{font-size:12.5px;color:var(--ink2)}
+  .covcard .live{color:var(--green);font-weight:700}.covcard .road{color:var(--gold);font-weight:700}
+
+  .grp-h{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--maroon);text-transform:uppercase;
+    margin:16px 0 11px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+  .sig{margin-bottom:14px}
+  .sig .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+  .sig .name{font-size:13px;font-weight:600}
+  .sig .name span{color:var(--mut2);font-weight:500;font-size:11px;margin-left:6px}
+  .sig .val{font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
+  .sig .val b{color:var(--ink)}
+  .bar{height:9px;background:var(--panel2);border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:6px}
+  .sig .foot{font-size:10.5px;color:var(--mut);margin-top:4px;display:flex;justify-content:space-between}
+
+  .actbtn{background:var(--maroon);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:13px;
+    font-weight:700;cursor:pointer;font-family:var(--font)}
+  .actbtn:hover{background:var(--maroon-d)}
+  .actbtn.done{background:#eef7f1;color:var(--green);border:1px solid #bfe0cc;cursor:default}
+
+  /* copilot */
+  .copilot{background:var(--panel2);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .cp-head{display:flex;align-items:center;gap:10px;padding:14px 18px 12px;border-bottom:1px solid var(--line2)}
+  .cp-av{width:30px;height:30px;border-radius:8px;background:var(--maroon);color:#fff;display:grid;place-items:center;font-size:14px;flex:none}
+  .cp-head .t{font-weight:700;font-size:13.5px}
+  .cp-head .s{font-size:11px;color:var(--mut)}
+  .ai-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.5px;color:#fff;background:var(--gold);
+    padding:3px 8px;border-radius:6px;display:none}
+  .ai-badge.show{display:inline-block}
+  .cp-body{padding:14px 18px 16px}
+  .cp-block{margin-top:14px}
+  .cp-block:first-child{margin-top:0}
+  .cp-block .h{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:700;margin-bottom:8px}
+  .cp-why{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .cp-why li{position:relative;padding-left:22px;font-size:13px;color:var(--ink)}
+  .cp-why li::before{content:"!";position:absolute;left:0;top:1px;width:15px;height:15px;border-radius:50%;
+    background:var(--gold-bg);color:var(--gold);font-size:10px;font-weight:800;display:grid;place-items:center}
+  .cp-para{font-size:13px;color:var(--ink);line-height:1.6}
+  .cp-rec{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .cp-rec .ico{font-size:17px}
+  .cp-rec .txt .a{font-weight:700;font-size:13.5px}
+  .cp-rec .txt .why{font-size:12px;color:var(--ink2);margin-top:2px}
+  .typing{display:inline-flex;gap:4px;padding:4px 0}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--mut2);animation:blink 1.2s infinite both}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+
+  .askbox{display:flex;gap:8px;margin-top:8px}
+  .askbox input{flex:1;background:#fff;border:1px solid var(--line);border-radius:9px;color:var(--ink);
+    padding:9px 12px;font-size:13px;font-family:var(--font)}
+  .askbox input:focus{outline:none;border-color:var(--maroon)}
+  .askbox button{background:var(--maroon);color:#fff;border:none;border-radius:9px;padding:0 15px;font-size:13px;
+    font-weight:700;cursor:pointer;font-family:var(--font)}
+  .askbox button:hover{background:var(--maroon-d)}
+  .qa{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .qa .item{border-left:2px solid var(--gold-line);padding-left:11px}
+  .qa .q{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .qa .a{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.55}
+  .disclaimer{font-size:10.5px;color:var(--mut);padding:0 18px 12px;font-style:italic}
+
+  /* toast */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);
+    color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.25);
+    opacity:0;pointer-events:none;transition:.25s;z-index:60;display:flex;align-items:center;gap:9px}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .tick{color:#5fd6a0;font-weight:800}
+
+  @media(max-width:1100px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.grid3{grid-template-columns:1fr}.sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">P</div>
+    <div><div class="nm">SME Pulse</div><div class="sub">Early Warning System</div></div>
+  </div>
+  <nav class="nav">
+    <div class="lbl">Monitoring</div>
+    <a data-tab="overview" class="active"><span class="dot"></span> Portfolio overview</a>
+    <a data-tab="watchlist"><span class="dot"></span> Watchlist</a>
+    <div class="lbl">Book</div>
+    <a class="muted"><span class="dot"></span> Collections</a>
+    <a class="muted"><span class="dot"></span> Collateral desk</a>
+    <a class="muted"><span class="dot"></span> Restructuring</a>
+  </nav>
+  <div class="foot">
+    <div><b>Demo build</b> · synthetic data</div>
+    <div style="margin-top:4px">Rule-based scoring · optional AI co-pilot</div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="hbar">
+    <div>
+      <h1 id="htitle">Portfolio Overview</h1>
+      <div class="tag" id="hsub">SME secured lending — LAP &amp; secured business loans</div>
+    </div>
+    <div class="asof">As of 20 Sep 2026<br>Nightly EWS batch</div>
+  </div>
+
+  <div class="content">
+    <div class="kpis" id="kpis"></div>
+    <div id="view-overview"></div>
+    <div id="view-watchlist" style="display:none"></div>
+  </div>
+</main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toast" id="toast"><span class="tick">✓</span><span id="toast-msg"></span></div>
+
+<script>
+/* ============================================================================
+   SCORING ENGINE  (transparent, weights visible)
+   ==========================================================================*/
+// 12 signals, weights sum to 100 (SCF). Non-SCF drops "anchor" and rescales.
+const WEIGHTS = {
+  dpd:      {w:18, label:"DPD trend (last 3 cycles)", group:"repay"},
+  bounce:   {w:14, label:"EMI bounces", group:"repay"},
+  emiInflow:{w:12, label:"EMI-to-inflow ratio", group:"cash"},
+  aaInflow: {w:10, label:"AA inflow change (3m)", group:"cash"},
+  turn:     {w:8,  label:"Turnover decline (QoQ)", group:"cash"},
+  bureau:   {w:10, label:"Bureau score drop", group:"ext"},
+  gst:      {w:8,  label:"GST filing delay", group:"ext"},
+  unsec:    {w:6,  label:"New unsecured borrowings", group:"ext"},
+  mca:      {w:6,  label:"MCA new charges", group:"ext"},
+  epfo:     {w:4,  label:"EPFO deposit delay", group:"ext"},
+  legal:    {w:2,  label:"Legal / Sec-138 flags", group:"ext"},
+  anchor:   {w:2,  label:"Anchor payment delay", group:"ext"},   // SCF only
+};
+const GROUPS=[
+  {key:"repay", title:"Repayment · LMS"},
+  {key:"cash",  title:"Cash-flow · Account Aggregator"},
+  {key:"ext",   title:"External · Bureau, GST, MCA, EPFO, Legal, Anchor"},
+];
+const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
+
+function subScores(a){
+  const last3=a.dpd_history.slice(-3);
+  const maxD=Math.max(...last3), avgD=last3.reduce((s,x)=>s+x,0)/3;
+  const drop=a.bureau_score_onboarding-a.bureau_score_current;
+  return {
+    dpd:      clamp((0.6*maxD+0.4*avgD)/90*100,0,100),
+    bounce:   a.emi_bounces_last_3_cycles/3*100,
+    emiInflow:clamp((a.emi_to_inflow_ratio_pct-20)/25*100,0,100),
+    aaInflow: clamp(-a.aa_inflow_change_3m_pct/30*100,0,100),
+    turn:     clamp(-a.turnover_change_qoq_pct/30*100,0,100),
+    bureau:   clamp(drop/120*100,0,100),
+    gst:      a.gst_filing_delay_months/4*100,
+    unsec:    a.new_unsecured_loans_last_6m/3*100,
+    mca:      a.mca_new_charges_6m/2*100,
+    epfo:     a.epfo_delay_months/3*100,
+    legal:    a.legal_flags/2*100,
+    anchor:   (a.anchor_delay_days||0)/60*100,
+  };
+}
+const DPD_RED_FLOOR=60;   // current DPD >= this always lands in the red band
+function signals(a){
+  const last3=a.dpd_history.slice(-3);
+  const drop=a.bureau_score_onboarding-a.bureau_score_current;
+  const sub=subScores(a), contrib={}, effW={};
+  const isSCF=a.product_type==="Supply Chain Finance";
+  const keys=Object.keys(WEIGHTS).filter(k=>k!=="anchor"||isSCF);  // non-SCF excludes anchor
+  const scale=100/keys.reduce((s,k)=>s+WEIGHTS[k].w,0);            // redistribute the 2 anchor pts
+  let sum=0;
+  for(const k of keys){ effW[k]=WEIGHTS[k].w*scale; contrib[k]=effW[k]*sub[k]/100; sum+=contrib[k]; }
+  const curDpd=a.dpd_history[a.dpd_history.length-1];
+  const floored=curDpd>=DPD_RED_FLOOR;                 // override: 60+ DPD => red
+  const score=Math.round(floored?Math.max(sum,65):sum);
+  return {sub,contrib,effW,keys,isSCF,score,rawScore:Math.round(sum),floored,raw:{dpd:{last3},bureau:{drop}}};
+}
+function band(s){ return s>=65?"red":s>=45?"amber":s>=30?"watch":"none"; }
+
+/* synthesized 6-month score history: recompute DPD from real history, ramp other
+   signals up toward their current value (stress builds over time). */
+function scoreAtMonth(a,k){ // k=0 (5 months ago) .. 5 (now)
+  const idx=6+k;                                   // dpd_history index (0..11)
+  const last3=a.dpd_history.slice(Math.max(0,idx-2),idx+1);
+  const maxD=Math.max(...last3), avgD=last3.reduce((s,x)=>s+x,0)/last3.length;
+  const dpdSub=clamp((0.6*maxD+0.4*avgD)/90*100,0,100);
+  const cur=subScores(a), f=0.6+0.4*(k/5);
+  const isSCF=a.product_type==="Supply Chain Finance";
+  const keys=Object.keys(WEIGHTS).filter(key=>key!=="anchor"||isSCF);
+  const scale=100/keys.reduce((s,key)=>s+WEIGHTS[key].w,0);
+  let s=WEIGHTS.dpd.w*scale*dpdSub/100;            // DPD from real history
+  keys.filter(key=>key!=="dpd").forEach(key=>s+=WEIGHTS[key].w*scale*cur[key]*f/100);
+  return Math.round(s);
+}
+
+/* ============================================================================
+   CO-PILOT  (rule-based, precomputed — NOT an LLM)
+   ==========================================================================*/
+function copilot(a,S){
+  const cover=a.collateral_value/a.outstanding_exposure;
+  const b=band(S.score);
+  const curDpd=a.dpd_history[a.dpd_history.length-1];
+  const coverTxt=cover.toFixed(2)+"x";
+
+  const reasons=[];
+  if(S.contrib.dpd>=6) reasons.push({t:`Loan is ${curDpd} days past due (last 3 cycles: ${S.raw.dpd.last3.join(" → ")} days)`,p:S.contrib.dpd});
+  if(a.emi_bounces_last_3_cycles>=1) reasons.push({t:`${a.emi_bounces_last_3_cycles} EMI bounce${a.emi_bounces_last_3_cycles>1?"s":""} in the last 3 cycles`,p:S.contrib.bounce});
+  if(a.gst_filing_delay_months>=1) reasons.push({t:`GST filing delayed ${a.gst_filing_delay_months} month${a.gst_filing_delay_months>1?"s":""}`,p:S.contrib.gst});
+  if(a.turnover_change_qoq_pct<=-5) reasons.push({t:`Declared turnover down ${Math.abs(a.turnover_change_qoq_pct).toFixed(0)}% QoQ`,p:S.contrib.turn});
+  if(S.raw.bureau.drop>=25) reasons.push({t:`Bureau score fell ${S.raw.bureau.drop} points since onboarding (${a.bureau_score_onboarding} → ${a.bureau_score_current})`,p:S.contrib.bureau});
+  if(a.new_unsecured_loans_last_6m>=1) reasons.push({t:`${a.new_unsecured_loans_last_6m} new unsecured loan${a.new_unsecured_loans_last_6m>1?"s":""} in the last 6 months`,p:S.contrib.unsec});
+  if(a.emi_to_inflow_ratio_pct>=35) reasons.push({t:`EMI absorbs ${a.emi_to_inflow_ratio_pct}% of monthly bank inflows (healthy is under 20%)`,p:S.contrib.emiInflow});
+  if(a.aa_inflow_change_3m_pct<=-8) reasons.push({t:`Bank credit inflows down ${Math.abs(a.aa_inflow_change_3m_pct).toFixed(0)}% over 3 months (Account Aggregator)`,p:S.contrib.aaInflow});
+  if(a.mca_new_charges_6m>=1) reasons.push({t:`${a.mca_new_charges_6m} new charge${a.mca_new_charges_6m>1?"s":""} registered on company assets at MCA (fresh secured borrowing)`,p:S.contrib.mca});
+  if(a.epfo_delay_months>=1) reasons.push({t:`EPFO / PF deposits delayed ${a.epfo_delay_months} month${a.epfo_delay_months>1?"s":""}`,p:S.contrib.epfo});
+  if(a.legal_flags>=1) reasons.push({t:`${a.legal_flags} legal / Sec-138 case flag${a.legal_flags>1?"s":""} on record`,p:S.contrib.legal+3});
+  if(a.product_type==="Supply Chain Finance" && a.anchor_delay_days>=7)
+    reasons.push({t:`Anchor-buyer payments delayed ${a.anchor_delay_days} days beyond terms — the core stress driver for this Supply Chain Finance line`,p:clamp(a.anchor_delay_days/4,8,22)});
+  reasons.sort((x,y)=>y.p-x.p);
+  const why=reasons.slice(0,4).map(r=>r.t);
+  if(!why.length) why.push("Composite score crossed the watch threshold on combined mild signals.");
+
+  let action,ico,cls,rationale;
+  if(b==="watch"){
+    action="Watch only"; ico="👁"; cls="a-watch";
+    rationale=`Early, mild signals; collateral cover healthy at ${coverTxt}. Keep on the monitoring list — no field action yet.`;
+  } else if(b==="red"){
+    action="Field visit + restructure discussion"; ico="🏠"; cls="a-restr";
+    if(cover>1.4) rationale=`High stress but collateral cover strong at ${coverTxt} — secured position holds. Engage borrower on restructure, not a write-off posture.`;
+    else if(cover>=1.1) rationale=`High stress with adequate cover (${coverTxt}). Prioritise a field visit; discuss restructure while collateral still covers exposure.`;
+    else rationale=`High stress AND thin collateral cover (${coverTxt}) — exposure barely secured. Urgent field visit; assess restructure vs. recovery action.`;
+  } else {
+    if(a.emi_bounces_last_3_cycles>=2 || curDpd>=30){
+      action="Payment reminder escalation"; ico="📞"; cls="a-esc";
+      rationale=`Active repayment slippage; collateral cover ${coverTxt}. Escalate reminders / RM call before it hardens into 90+ DPD.`;
+    } else if(cover>1.4 && (a.turnover_change_qoq_pct<=-8 || a.new_unsecured_loans_last_6m>=2)){
+      action="Prepayment nudge"; ico="💸"; cls="a-nudge";
+      rationale=`Cash-flow stress but strong cover (${coverTxt}) and no hard delinquency yet. Nudge part-prepayment to de-risk while the borrower can.`;
+    } else {
+      action="Payment reminder escalation"; ico="📞"; cls="a-esc";
+      rationale=`Building stress, cover ${coverTxt}. Step up reminders and re-verify cash flows this cycle.`;
+    }
+  }
+
+  // 3 precomputed Q&A pairs (fallback when the live co-pilot is unavailable)
+  const topTwo=reasons.slice(0,2).map(r=>r.t.replace(/\s*\(.*?\)/,"").toLowerCase());
+  const qa=[
+    {q:"What's driving the risk here?",
+     a:`Primarily ${topTwo.join(" and ")||"a combination of mild signals"}. The composite EWS score is ${S.score}/100, placing this account in the ${b.toUpperCase()} band.`},
+    {q:"Is our collateral position safe?",
+     a:`Collateral cover is ${coverTxt} (collateral ₹ vs. outstanding exposure). ${cover>1.4?"That's a comfortable cushion — the secured position holds even under stress.":cover>=1.1?"Adequate, but monitor — a further slide would erode the cushion.":"Thin — exposure is barely secured, so act before recovery value drops."}`},
+    {q:"What should the RM do next?",
+     a:`${action}. ${rationale}`},
+  ];
+
+  return {why,action,ico,cls,rationale,cover,qa};
+}
+
+/* ============================================================================
+   BUILD
+   ==========================================================================*/
+const SCORED=ACCOUNTS.map(a=>{
+  const S=signals(a); const b=band(S.score);
+  const cp=copilot(a,S);
+  return {a,S,band:b,cp,flagged:b!=="none",priority:a.outstanding_exposure*S.score,
+          curDpd:a.dpd_history[a.dpd_history.length-1]};
+});
+const FLAGGED=SCORED.filter(x=>x.flagged);
+const PRODUCTS=["LAP / Mortgage-backed","Working Capital Loan","Machinery Financing","Supply Chain Finance","Unsecured Business Loan top-up"];
+const actioned=new Set();  // in-memory "action taken" state
+
+function inr(n){
+  if(n>=1e7) return "₹"+(n/1e7).toFixed(2).replace(/\.00$/,"")+" Cr";
+  if(n>=1e5) return "₹"+(n/1e5).toFixed(2).replace(/\.00$/,"")+" L";
+  return "₹"+Math.round(n).toLocaleString("en-IN");
+}
+function crStr(n){ return "₹"+(n/1e7).toFixed(2)+" Cr"; }
+
+/* ---- header KPIs ---- */
+const totalBook=ACCOUNTS.reduce((s,a)=>s+a.outstanding_exposure,0);
+const reds=FLAGGED.filter(x=>x.band==="red"), ambers=FLAGGED.filter(x=>x.band==="amber"), watches=FLAGGED.filter(x=>x.band==="watch");
+const expOf=r=>r.reduce((s,x)=>s+x.a.outstanding_exposure,0);
+const riskRed=expOf(reds), riskAmber=expOf(ambers), riskTotal=riskRed+riskAmber+expOf(watches);
+const preDelinq=FLAGGED.filter(x=>x.curDpd===0);
+
+document.getElementById("kpis").innerHTML=`
+  <div class="kpi"><div class="k">Total book size</div><div class="v">${inr(totalBook)}</div>
+    <div class="sub">${ACCOUNTS.length.toLocaleString("en-IN")} SME secured loans</div></div>
+  <div class="kpi"><div class="k">Accounts scored</div><div class="v">${ACCOUNTS.length.toLocaleString("en-IN")}</div>
+    <div class="sub">Nightly, 6-signal engine</div></div>
+  <div class="kpi"><div class="k">Accounts flagged</div><div class="v">${FLAGGED.length}</div>
+    <div class="sub"><span class="r">${reds.length} red</span> · <span class="a">${ambers.length} amber</span> · ${watches.length} watch</div></div>
+  <div class="kpi risk"><div class="k">Exposure at risk</div><div class="v">${inr(riskTotal)}</div>
+    <div class="sub"><span class="r">${inr(riskRed)} red</span> · <span class="a">${inr(riskAmber)} amber</span></div></div>
+  <div class="kpi"><div class="k">Pre-delinquency</div><div class="v">${preDelinq.length}</div>
+    <div class="sub">flagged but still current on EMIs</div></div>`;
+
+/* ============================================================================
+   OVERVIEW SCREEN
+   ==========================================================================*/
+function monthlyRisk(){
+  const labels=["-5","-4","-3","-2","-1","Now"];
+  return labels.map((lab,k)=>{
+    let total=0,red=0;
+    for(const x of SCORED){
+      const s=scoreAtMonth(x.a,k);
+      if(s>=30){ total+=x.a.outstanding_exposure; if(s>=65) red+=x.a.outstanding_exposure; }
+    }
+    return {lab,total,red};
+  });
+}
+function groupExposure(keyFn){
+  const m={};
+  for(const x of FLAGGED){ const k=keyFn(x.a); m[k]=(m[k]||0)+x.a.outstanding_exposure; }
+  return Object.entries(m).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v);
+}
+function hbarList(rows,max){
+  return `<div class="hbars">`+rows.map(r=>
+    `<div class="hrow"><div class="nm" title="${r.k}">${r.k}</div>
+      <div class="track"><div class="fill" style="width:${(r.v/max*100).toFixed(1)}%"></div></div>
+      <div class="amt">${crStr(r.v)}</div></div>`).join("")+`</div>`;
+}
+function renderOverview(){
+  const mr=monthlyRisk();
+  const trend=`<div class="spark">${svgChart({
+      series:[{vals:mr.map(m=>m.total),color:"var(--maroon)",fill:true},
+              {vals:mr.map(m=>m.red),color:"var(--gold)",fill:false}],
+      min:0, xlabels:monLabels(6),
+      yfmt:v=>Math.round(v/1e7), valfmt:v=>"₹"+(v/1e7).toFixed(1)+"Cr"})}</div>
+    <div class="legend"><span><i style="background:var(--maroon)"></i>Total exposure at risk</span>
+      <span><i style="background:var(--gold)"></i>Red-band exposure</span>
+      <span style="margin-left:auto;color:var(--mut)">₹ Cr</span></div>`;
+
+  const byInd=groupExposure(a=>a.industry), byReg=groupExposure(a=>a.region).slice(0,8);
+  const maxInd=Math.max(...byInd.map(r=>r.v)), maxReg=Math.max(...byReg.map(r=>r.v));
+
+  const prodStats=PRODUCTS.map(p=>{
+    const tot=ACCOUNTS.filter(a=>a.product_type===p).length;
+    const fl=FLAGGED.filter(x=>x.a.product_type===p);
+    return {p,tot,n:fl.length,rate:tot?fl.length/tot*100:0,risk:fl.reduce((s,x)=>s+x.a.outstanding_exposure,0)};
+  });
+  const maxRate=Math.max(...prodStats.map(s=>s.rate));
+
+  const chans=["DSA","branch","digital"].map(ch=>{
+    const tot=ACCOUNTS.filter(a=>a.channel===ch).length;
+    const fl=FLAGGED.filter(x=>x.a.channel===ch).length;
+    return {ch,tot,fl,rate:tot?fl/tot*100:0};
+  });
+
+  document.getElementById("view-overview").innerHTML=`
+    <div class="grid2">
+      <div class="card">
+        <h3>Exposure at risk — last 6 months</h3><div class="cs">Synthesized from DPD history; flagged-account outstanding, split by band</div>
+        ${trend}
+      </div>
+      <div class="card">
+        <h3>Channel-wise flag rate</h3><div class="cs">Share of each sourcing channel's book currently flagged by the EWS</div>
+        <div class="chan">${chans.map(c=>`<div class="c"><div class="n">${c.ch}</div><div class="p">${c.rate.toFixed(1)}%</div>
+          <div class="d">${c.fl} of ${c.tot.toLocaleString("en-IN")} flagged</div></div>`).join("")}</div>
+        <div class="weights-note" style="margin-top:16px">Flag rate = flagged accounts ÷ total accounts sourced through that channel.</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px">
+      <h3>Risk by product type</h3><div class="cs">Flag rate and exposure at risk per product — Working Capital runs hottest, LAP / Mortgage-backed coolest</div>
+      <div class="hbars">${prodStats.map(s=>
+        `<div class="hrow" style="grid-template-columns:210px 1fr 150px">
+          <div class="nm" style="font-weight:600">${s.p}</div>
+          <div class="track"><div class="fill" style="width:${(s.rate/maxRate*100).toFixed(1)}%"></div></div>
+          <div class="amt">${s.rate.toFixed(1)}% flagged · ${crStr(s.risk)}</div></div>`).join("")}</div>
+      <div class="weights-note" style="margin-top:14px">Bar = flag rate (flagged ÷ total for that product). Amount also shows exposure at risk (₹ Cr) for the product.</div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Exposure at risk by industry</h3><div class="cs">Flagged outstanding, ₹ Cr</div>${hbarList(byInd,maxInd)}</div>
+      <div class="card"><h3>Exposure at risk by region</h3><div class="cs">Top 8 regions, ₹ Cr</div>${hbarList(byReg,maxReg)}</div>
+    </div>
+    <div class="card covcard">
+      <div class="lbl">Signal coverage</div>
+      <div class="txt"><span class="live">12 live</span> (LMS · Account Aggregator · Bureau · GST · MCA · EPFO · Legal · Anchor) <span style="color:var(--mut2)">→</span> <span class="road">Sector-cluster stress overlay</span> next on the roadmap</div>
+    </div>`;
+}
+
+/* ============================================================================
+   WATCHLIST SCREEN
+   ==========================================================================*/
+let filter="all", prodFilter="all", query="", sort={key:"priority",dir:-1};
+const badgeCls={red:"b-red",amber:"b-amber",watch:"b-watch"};
+function topTriggers(S){
+  return S.keys.map(k=>({k,c:S.contrib[k],label:WEIGHTS[k].label}))
+    .sort((x,y)=>y.c-x.c).filter(x=>x.c>=2).slice(0,2);
+}
+function chipRow(){
+  const c=k=>FLAGGED.filter(x=>x.band===k).length;
+  return `<div class="controls"><div class="chips">
+    <div class="chip ${filter==="all"?"on":""}" data-f="all">All<span class="n">${FLAGGED.length}</span></div>
+    <div class="chip ${filter==="red"?"on":""}" data-f="red">Red<span class="n">${c("red")}</span></div>
+    <div class="chip amber ${filter==="amber"?"on":""}" data-f="amber">Amber<span class="n">${c("amber")}</span></div>
+    <div class="chip watch ${filter==="watch"?"on":""}" data-f="watch">Watch<span class="n">${c("watch")}</span></div>
+    <div class="chip predelinq ${filter==="predelinq"?"on":""}" data-f="predelinq">Pre-delinquency<span class="n">${preDelinq.length}</span></div>
+    <div class="chip actioned ${filter==="actioned"?"on":""}" data-f="actioned">Actioned<span class="n" id="act-n">${actioned.size}</span></div>
+    </div>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+      <input id="search" placeholder="Search borrower, ID, industry, region…" autocomplete="off" value="${query}">
+    </div></div>
+    <div class="controls" style="margin-top:-4px">
+      <div class="chips"><span style="font-size:11.5px;color:var(--mut);font-weight:600;align-self:center;margin-right:2px">Product:</span>
+      <div class="chip ${prodFilter==="all"?"on":""}" data-p="all">All products</div>
+      ${PRODUCTS.map(p=>{const n=FLAGGED.filter(x=>x.a.product_type===p).length;
+        return `<div class="chip ${prodFilter===p?"on":""}" data-p="${p}">${p}<span class="n">${n}</span></div>`;}).join("")}
+      </div></div>`;
+}
+const COLS=[
+  {key:"name",label:"Account"},{key:"product",label:"Product"},{key:"industry",label:"Industry"},{key:"region",label:"Region"},
+  {key:"exposure",label:"Exposure",num:true},{key:"score",label:"Score",num:true},
+  {key:"trigs",label:"Top triggers",nosort:true},{key:"action",label:"Recommended action",nosort:true},
+];
+const NCOLS=COLS.length;
+function sortVal(x,key){
+  switch(key){
+    case "name":return x.a.borrower_name; case "product":return x.a.product_type;
+    case "industry":return x.a.industry; case "region":return x.a.region;
+    case "exposure":return x.a.outstanding_exposure; case "score":return x.S.score; default:return x.priority;
+  }
+}
+function renderWatchlist(){
+  document.getElementById("view-watchlist").innerHTML=chipRow()+`
+    <div class="tablewrap"><table><thead><tr>${COLS.map(c=>{
+      const on=sort.key===c.key;
+      return `<th class="${c.num?"num":""} ${c.nosort?"nosort":""} ${on?"sorted":""}" ${c.nosort?"":`data-sort="${c.key}"`}>${c.label}${c.nosort?"":`<span class="arr">${on?(sort.dir<0?"▼":"▲"):"↕"}</span>`}</th>`;
+    }).join("")}</tr></thead><tbody id="rows"></tbody></table></div>
+    <div class="count-note" id="countnote"></div>
+    <div class="weights-note" id="weights"></div>`;
+  wireWatchlist();
+  renderRows();
+}
+function renderRows(){
+  let list=FLAGGED.slice();
+  if(filter==="predelinq") list=list.filter(x=>x.curDpd===0);
+  else if(filter==="actioned") list=list.filter(x=>actioned.has(x.a.account_id));
+  else if(filter!=="all") list=list.filter(x=>x.band===filter);
+  if(filter!=="actioned") list=list.filter(x=>!actioned.has(x.a.account_id)); // hide actioned from other views
+  if(prodFilter!=="all") list=list.filter(x=>x.a.product_type===prodFilter);
+  if(query){ const q=query.toLowerCase();
+    list=list.filter(x=>(x.a.borrower_name+" "+x.a.account_id+" "+x.a.product_type+" "+x.a.industry+" "+x.a.region).toLowerCase().includes(q)); }
+  list.sort((p,q2)=>{ const va=sortVal(p,sort.key), vb=sortVal(q2,sort.key);
+    return (va>vb?1:va<vb?-1:0)*sort.dir; });
+
+  document.getElementById("countnote").textContent=
+    `Showing ${list.length} of ${FLAGGED.length} flagged accounts${filter==="predelinq"?" · pre-delinquency (current on EMIs, early signals only)":""}${actioned.size?` · ${actioned.size} actioned`:""}`;
+  const rowsEl=document.getElementById("rows");
+  if(!list.length){ rowsEl.innerHTML=`<tr><td colspan="${NCOLS}" class="empty">No accounts match.</td></tr>`; return; }
+  rowsEl.innerHTML=list.slice(0,400).map(x=>{
+    const a=x.a,S=x.S,cp=x.cp,isAct=actioned.has(a.account_id);
+    const trg=topTriggers(S).map(t=>`<div class="trig">${t.label}</div>`).join("")||`<div class="trig muted">combined mild signals</div>`;
+    const pd=x.curDpd===0?`<span class="pd-tag">PRE-DELINQ</span>`:"";
+    return `<tr data-id="${a.account_id}" class="${isAct?"row-actioned":""}">
+      <td><div class="acc-nm">${a.borrower_name}${pd}</div><div class="acc-id">${a.account_id} · ${a.channel}</div></td>
+      <td class="muted">${a.product_type}</td>
+      <td class="muted">${a.industry}</td>
+      <td class="muted">${a.region}</td>
+      <td class="num">${inr(a.outstanding_exposure)}</td>
+      <td><span class="badge ${badgeCls[x.band]}"><span class="sc">${S.score}</span> ${x.band.toUpperCase()}</span></td>
+      <td>${trg}</td>
+      <td>${isAct?`<span class="done-tag">✓ Actioned</span>`:`<span class="action ${cp.cls}">${cp.action}</span>`}</td>
+    </tr>`;
+  }).join("")+(list.length>400?`<tr><td colspan="${NCOLS}" class="empty">+ ${list.length-400} more — refine with search or filters.</td></tr>`:"");
+  rowsEl.querySelectorAll("tr[data-id]").forEach(tr=>tr.onclick=()=>openDrawer(tr.dataset.id));
+}
+function wireWatchlist(){
+  const vw=document.getElementById("view-watchlist");
+  vw.querySelectorAll(".chip[data-f]").forEach(el=>el.onclick=()=>{filter=el.dataset.f;renderWatchlist();});
+  vw.querySelectorAll(".chip[data-p]").forEach(el=>el.onclick=()=>{prodFilter=el.dataset.p;renderWatchlist();});
+  vw.querySelectorAll("th[data-sort]").forEach(th=>th.onclick=()=>{
+    const k=th.dataset.sort;
+    const asc=["name","product","industry","region"].includes(k);
+    if(sort.key===k) sort.dir*=-1; else sort={key:k,dir:asc?1:-1};
+    renderWatchlist();
+  });
+  const s=document.getElementById("search");
+  s.oninput=e=>{query=e.target.value;renderRows();};
+  document.getElementById("weights").innerHTML=
+    "Scoring weights (fixed, visible): "+Object.values(WEIGHTS).map(w=>`${w.label} <b>${w.w}</b>`).join(" · ")+
+    ". Composite 0–100; bands red ≥65 / amber 45–64 / watch 30–44.";
+}
+
+/* ============================================================================
+   TABS
+   ==========================================================================*/
+function showTab(tab){
+  document.querySelectorAll(".nav a[data-tab]").forEach(a=>a.classList.toggle("active",a.dataset.tab===tab));
+  document.getElementById("view-overview").style.display=tab==="overview"?"":"none";
+  document.getElementById("view-watchlist").style.display=tab==="watchlist"?"":"none";
+  document.getElementById("htitle").textContent=tab==="overview"?"Portfolio Overview":"Portfolio Watchlist";
+  document.getElementById("hsub").textContent=tab==="overview"
+    ? "SME secured lending — LAP & secured business loans"
+    : "Flagged accounts, ranked by exposure × score — click a row to drill in";
+  if(tab==="overview") renderOverview(); else renderWatchlist();
+}
+document.querySelectorAll(".nav a[data-tab]").forEach(a=>a.onclick=()=>showTab(a.dataset.tab));
+
+/* ============================================================================
+   TOAST
+   ==========================================================================*/
+let toastT;
+function toast(msg){
+  const t=document.getElementById("toast");
+  document.getElementById("toast-msg").textContent=msg;
+  t.classList.add("show"); clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove("show"),2600);
+}
+
+/* ============================================================================
+   DRAWER
+   ==========================================================================*/
+const drawer=document.getElementById("drawer"), scrim=document.getElementById("scrim");
+function closeDrawer(){drawer.classList.remove("open");scrim.classList.remove("open");}
+scrim.onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+
+/* month labels: n points ending at "Now" (e.g. 12 -> M-11 … M-1, Now) */
+function monLabels(n){ return Array.from({length:n},(_,i)=> i===n-1?"Now":"M-"+(n-1-i)); }
+
+/* smooth cardinal-spline path through points */
+function smoothPath(pts){
+  if(pts.length<3) return "M"+pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L");
+  let d="M"+pts[0][0].toFixed(1)+" "+pts[0][1].toFixed(1);
+  for(let i=0;i<pts.length-1;i++){
+    const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6;
+    const c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;
+    d+=` C${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+/* uniformly-scaled SVG line chart: gridlines + values, x-axis month labels,
+   clean dashed threshold w/ neutral label, subtle fill, 2px smooth lines,
+   last-point marker + value only.  opts: {series:[{vals,color,fill,dot}],
+   min,max,refline,reflabel,xlabels,yfmt,valfmt}  */
+function svgChart(opts){
+  const W=360,H=116,padL=40,padR=58,padT=14,padB=22;
+  const n=opts.series[0].vals.length;
+  let min=opts.min!=null?opts.min:0;
+  let max=opts.max!=null?opts.max:Math.max(...opts.series.flatMap(s=>s.vals));
+  if(opts.refline!=null) max=Math.max(max,opts.refline);
+  if(max<=min) max=min+1;
+  const plotW=W-padL-padR, plotH=H-padT-padB, baseY=padT+plotH;
+  const X=i=>padL+i*(plotW/Math.max(1,n-1));
+  const Y=v=>padT+(1-(v-min)/(max-min))*plotH;
+
+  const grid=[min,(min+max)/2,max].map(t=>{
+    const y=Y(t);
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1" opacity=".8"/>`+
+      `<text x="${padL-6}" y="${(y+3).toFixed(1)}" font-size="9" fill="var(--mut2)" text-anchor="end">${opts.yfmt(t)}</text>`;
+  }).join("");
+
+  let ref="";
+  if(opts.refline!=null){
+    const y=Y(opts.refline), ly=Math.max(padT+9,y-4);
+    ref=`<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="var(--maroon)" stroke-width="1.2" stroke-dasharray="4 3" opacity=".55"/>`+
+      `<text x="${(W-padR).toFixed(1)}" y="${ly.toFixed(1)}" font-size="9" fill="var(--maroon)" text-anchor="end" opacity=".9">${opts.reflabel}</text>`;
+  }
+
+  let paths="",marks="";
+  opts.series.forEach(s=>{
+    const pts=s.vals.map((v,i)=>[X(i),Y(v)]);
+    const d=smoothPath(pts);
+    if(s.fill){
+      const area=d+` L${pts[n-1][0].toFixed(1)} ${baseY.toFixed(1)} L${pts[0][0].toFixed(1)} ${baseY.toFixed(1)} Z`;
+      paths+=`<path d="${area}" fill="${s.color}" fill-opacity=".09" stroke="none"/>`;
+    }
+    paths+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    const last=pts[n-1], lv=s.vals[n-1], dotC=s.dot?s.dot(lv):s.color;
+    marks+=`<circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" fill="${dotC}" stroke="#fff" stroke-width="1.5"/>`;
+    const ly=clamp(last[1]+3,padT+9,baseY);
+    marks+=`<text x="${(last[0]+7).toFixed(1)}" y="${ly.toFixed(1)}" font-size="10" font-weight="700" fill="${s.color}" text-anchor="start">${opts.valfmt(lv)}</text>`;
+  });
+
+  const step=Math.max(1,Math.ceil((n-1)/5));
+  let xl="";
+  for(let i=0;i<n;i++){
+    if(i%step!==0 && i!==n-1) continue;
+    const anc=i===0?"start":i===n-1?"end":"middle";
+    xl+=`<text x="${X(i).toFixed(1)}" y="${(H-6).toFixed(1)}" font-size="9" fill="var(--mut2)" text-anchor="${anc}">${opts.xlabels[i]}</text>`;
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">${grid}${ref}${paths}${marks}${xl}</svg>`;
+}
+
+const barColor={red:"var(--maroon)",amber:"var(--gold)",watch:"var(--watch)"};
+let CURRENT=null;
+
+function openDrawer(id){
+  const x=FLAGGED.find(v=>v.a.account_id===id); if(!x) return;
+  CURRENT=x;
+  const a=x.a,S=x.S,cp=x.cp;
+  const coverClass=cp.cover>=1.4?"cover-ok":cp.cover>=1.1?"":"cover-thin";
+  const curDpd=x.curDpd, isAct=actioned.has(a.account_id);
+
+  const valTxt=(k)=>{
+    if(k==="dpd")      return `Now <b>${curDpd}d</b> · last 3: ${S.raw.dpd.last3.join(" / ")}d`;
+    if(k==="bounce")   return `<b>${a.emi_bounces_last_3_cycles}</b> of 3 cycles`;
+    if(k==="emiInflow")return `<b>${a.emi_to_inflow_ratio_pct}%</b> of inflows <span style="color:var(--mut2)">(healthy &lt;20%)</span>`;
+    if(k==="aaInflow") return `<b>${a.aa_inflow_change_3m_pct>0?"+":""}${a.aa_inflow_change_3m_pct}%</b> over 3m`;
+    if(k==="turn")     return `<b>${a.turnover_change_qoq_pct>0?"+":""}${a.turnover_change_qoq_pct}%</b> QoQ`;
+    if(k==="bureau")   return `<b>-${S.raw.bureau.drop}</b> pts (${a.bureau_score_onboarding}→${a.bureau_score_current})`;
+    if(k==="gst")      return `<b>${a.gst_filing_delay_months}</b> month(s) late`;
+    if(k==="unsec")    return `<b>${a.new_unsecured_loans_last_6m}</b> in 6 months`;
+    if(k==="mca")      return `<b>${a.mca_new_charges_6m}</b> new charge(s)`;
+    if(k==="epfo")     return `<b>${a.epfo_delay_months}</b> month(s) delayed`;
+    if(k==="legal")    return `<b>${a.legal_flags}</b> case flag(s)`;
+    if(k==="anchor")   return `<b>${a.anchor_delay_days}</b> days beyond terms`;
+    return "";
+  };
+  const sigRows=GROUPS.map(g=>{
+    const rows=S.keys.filter(k=>WEIGHTS[k].group===g.key);
+    if(!rows.length) return "";
+    return `<div class="grp-h">${g.title}</div>`+rows.map(k=>{
+      const w=S.effW[k], pct=S.sub[k];   // pct of max = sub-score; bar width
+      const wLabel=Number.isInteger(w)?w:w.toFixed(1);
+      return `<div class="sig"><div class="top"><div class="name">${WEIGHTS[k].label}<span>weight ${wLabel}</span></div><div class="val">${valTxt(k)}</div></div>
+        <div class="bar"><div class="fill" style="width:${pct.toFixed(0)}%;background:${barColor[x.band]}"></div></div>
+        <div class="foot"><span>contributes ${S.contrib[k].toFixed(1)} / ${wLabel} pts</span><span>${pct.toFixed(0)}% of max</span></div></div>`;
+    }).join("");
+  }).join("");
+
+  const scoreHist=[0,1,2,3,4,5].map(k=>scoreAtMonth(a,k));
+
+  drawer.innerHTML=`
+    <div class="dh"><div class="row"><div>
+      <h2>${a.borrower_name}</h2><div class="id">${a.account_id}</div>
+      <div class="tags"><span class="tag" style="background:rgba(255,255,255,.3);font-weight:600">${a.product_type}</span><span class="tag">${a.industry}</span><span class="tag">${a.region}</span><span class="tag">${a.channel} sourced</span>
+        <span class="badge ${badgeCls[x.band]}"><span class="sc">${S.score}</span> ${x.band.toUpperCase()}</span>
+        ${curDpd===0?`<span class="tag" style="background:var(--gold);color:#fff">Pre-delinquency</span>`:""}</div>
+      </div><button class="close" onclick="closeDrawer()">✕</button></div></div>
+    <div class="db">
+      <div class="sec-t">Account details
+        <button class="actbtn ${isAct?"done":""}" id="markbtn" ${isAct?"disabled":""}>${isAct?"✓ Action taken":"Mark action taken"}</button></div>
+      <div class="facts">
+        <div class="fact"><div class="l">Sanctioned loan</div><div class="v">${inr(a.loan_amount)}</div></div>
+        <div class="fact"><div class="l">Outstanding exposure</div><div class="v">${inr(a.outstanding_exposure)}</div></div>
+        <div class="fact"><div class="l">Collateral value</div><div class="v">${inr(a.collateral_value)}</div></div>
+        <div class="fact"><div class="l">Collateral cover</div><div class="v ${coverClass}">${cp.cover.toFixed(2)}x</div></div>
+        <div class="fact"><div class="l">LTV (at origination)</div><div class="v">${(a.ltv*100).toFixed(0)}%</div></div>
+        <div class="fact"><div class="l">Tenure / on book</div><div class="v">${a.tenure_months} mo / ${a.months_on_book} mo</div></div>
+        <div class="fact"><div class="l">Declared annual turnover</div><div class="v">${inr(a.declared_annual_turnover)}</div></div>
+        <div class="fact"><div class="l">Current DPD</div><div class="v ${curDpd>=90?'cover-thin':''}">${curDpd} days</div></div>
+        ${a.product_type==="Supply Chain Finance"?`<div class="fact"><div class="l">Anchor-buyer payment delay</div><div class="v ${a.anchor_delay_days>=15?'cover-thin':''}">${a.anchor_delay_days} days</div></div>`:""}
+      </div>
+
+      <div class="sec-t">12-month DPD trend</div>
+      <div class="spark"><div class="cap"><span>Days past due · last 12 cycles</span><span>peak ${Math.max(...a.dpd_history)}d</span></div>
+        ${svgChart({series:[{vals:a.dpd_history,color:"var(--maroon)",fill:true,dot:d=>d>=90?"var(--maroon)":d>=30?"var(--gold)":"var(--watch)"}],
+          min:0,refline:90,reflabel:"90 DPD",xlabels:monLabels(12),yfmt:v=>Math.round(v)+"d",valfmt:v=>Math.round(v)+"d"})}</div>
+
+      <div class="sec-t">EWS score trend — 6 months</div>
+      <div class="spark"><div class="cap"><span>Composite score · synthesized history</span><span>now ${S.score}/100</span></div>
+        ${svgChart({series:[{vals:scoreHist,color:"var(--gold)",fill:true}],
+          min:0,max:100,refline:65,reflabel:"Red ≥65",xlabels:monLabels(6),yfmt:v=>Math.round(v),valfmt:v=>Math.round(v)})}</div>
+
+      <div class="sec-t">Signal breakdown &amp; score contribution</div>
+      ${sigRows}
+      <div class="weights-note">${(S.floored && S.rawScore < 65)
+        ? `Weighted signal score ${S.rawScore}/100, <b>floored to ${S.score}</b> — current DPD ≥ 60 forces the red band. `
+        : `Composite score <b>${S.score}/100</b> = sum of the twelve weighted contributions. `}Bands: red ≥ 65 · amber 45–64 · watch 30–44.${S.isSCF?"":" Non-SCF account — the 2-pt anchor-delay weight is redistributed proportionally across the other eleven signals."}</div>
+
+      <details class="roadmap">
+        <summary>Roadmap — next signal in production</summary>
+        <div class="rlist">
+          <div class="rrow"><div class="rn"><b>Sector-cluster stress overlay</b> — peer-cluster early-warning signal (12 signals now live; this is next)</div><span class="coming">Coming</span></div>
+        </div>
+      </details>
+
+      <div class="sec-t">Co-pilot assessment</div>
+      <div class="copilot">
+        <div class="cp-head"><div class="cp-av">◈</div>
+          <div><div class="t">EWS Co-pilot</div><div class="s" id="cp-status">Assessment</div></div>
+          <span class="ai-badge" id="ai-badge">AI</span></div>
+        <div class="cp-body">
+          <div class="cp-block"><div class="h">Why this account was flagged</div><div id="cp-assess"></div></div>
+          <div class="cp-block"><div class="h">Recommended action</div>
+            <div class="cp-rec"><div class="ico">${cp.ico}</div>
+              <div class="txt"><div class="a ${cp.cls}">${cp.action}</div><div class="why">${cp.rationale}</div></div></div></div>
+          <div class="cp-block"><div class="h">Ask about this account</div>
+            <div class="askbox"><input id="ask-in" placeholder="e.g. Is the collateral enough to restructure?" autocomplete="off">
+              <button id="ask-btn">Ask</button></div>
+            <div class="qa" id="qa"></div></div>
+        </div>
+        <div class="disclaimer">Suggestion only — final action per credit policy &amp; RBI norms. Live AI explanations paraphrase these facts; rule-engine action is deterministic.</div>
+      </div>
+    </div>`;
+
+  // canned "why flagged" as immediate content
+  renderWhy(cannedWhyHTML(cp));
+  document.getElementById("markbtn").onclick=()=>markActioned(a.account_id);
+  document.getElementById("ask-btn").onclick=askQuestion;
+  document.getElementById("ask-in").addEventListener("keydown",e=>{if(e.key==="Enter")askQuestion();});
+  drawer.classList.add("open");scrim.classList.add("open");drawer.scrollTop=0;
+
+  // try the live co-pilot for the assessment paragraph; fall back silently
+  liveAssessment(x);
+}
+
+function cannedWhyHTML(cp){ return `<ul class="cp-why">${cp.why.map(w=>`<li>${w}</li>`).join("")}</ul>`; }
+function renderWhy(html){ document.getElementById("cp-assess").innerHTML=html; }
+function typingHTML(){ return `<div class="typing"><i></i><i></i><i></i></div>`; }
+
+function factsPayload(x){
+  const a=x.a,S=x.S,cp=x.cp;
+  const pts=k=>+((S.contrib[k]||0).toFixed(1));
+  const f={
+    borrower_name:a.borrower_name, account_id:a.account_id, product_type:a.product_type, industry:a.industry, region:a.region, channel:a.channel,
+    ews_score:S.score, band:x.band, recommended_action:cp.action, rule_rationale:cp.rationale,
+    collateral_cover:cp.cover.toFixed(2)+"x", outstanding_exposure:inr(a.outstanding_exposure),
+    collateral_value:inr(a.collateral_value), ltv_pct:Math.round(a.ltv*100), current_dpd_days:x.curDpd,
+    signals_by_source:{
+      "repayment_LMS":{
+        dpd_trend:{current_days:x.curDpd, last_3_cycles:S.raw.dpd.last3, points:pts("dpd")},
+        emi_bounces_last_3_cycles:{value:a.emi_bounces_last_3_cycles, points:pts("bounce")},
+      },
+      "cashflow_account_aggregator":{
+        emi_to_inflow_ratio_pct:{value:a.emi_to_inflow_ratio_pct, healthy_below:20, points:pts("emiInflow")},
+        bank_inflow_change_3m_pct:{value:a.aa_inflow_change_3m_pct, points:pts("aaInflow")},
+        declared_turnover_change_qoq_pct:{value:a.turnover_change_qoq_pct, points:pts("turn")},
+      },
+      "external":{
+        bureau_score:{drop:S.raw.bureau.drop, onboarding:a.bureau_score_onboarding, current:a.bureau_score_current, points:pts("bureau")},
+        gst_filing_delay_months:{value:a.gst_filing_delay_months, points:pts("gst")},
+        new_unsecured_loans_6m:{value:a.new_unsecured_loans_last_6m, points:pts("unsec")},
+        mca_new_charges_6m:{value:a.mca_new_charges_6m, points:pts("mca")},
+        epfo_deposit_delay_months:{value:a.epfo_delay_months, points:pts("epfo")},
+        legal_sec138_flags:{value:a.legal_flags, points:pts("legal")},
+      },
+    },
+  };
+  if(S.isSCF){
+    f.signals_by_source.external.anchor_payment_delay_days={value:a.anchor_delay_days, points:pts("anchor")};
+    f.scf_stress_note="This is a Supply Chain Finance line; its stress is typically driven by anchor-buyer payment delays. Reference the anchor-payment delay in your narrative.";
+  }
+  return f;
+}
+async function callCopilot(body){
+  const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),6000);
+  try{
+    const r=await fetch("/api/copilot",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify(body),signal:ctrl.signal});
+    clearTimeout(t);
+    if(!r.ok) return null;
+    const j=await r.json();
+    return (j&&j.text)?j.text:null;
+  }catch(e){ clearTimeout(t); return null; }
+}
+async function liveAssessment(x){
+  const status=document.getElementById("cp-status"), badge=document.getElementById("ai-badge");
+  const token=x.a.account_id; // guard against stale responses if user switches rows
+  renderWhy(typingHTML()); status.textContent="Thinking…";
+  const text=await callCopilot({mode:"assessment",facts:factsPayload(x)});
+  if(CURRENT&&CURRENT.a.account_id!==token) return;         // drawer moved on
+  if(text){ renderWhy(`<div class="cp-para">${escapeHTML(text)}</div>`); status.textContent="AI assessment"; badge.classList.add("show"); }
+  else    { renderWhy(cannedWhyHTML(x.cp)); status.textContent="Rule-based assessment"; badge.classList.remove("show"); }
+}
+async function askQuestion(){
+  const inp=document.getElementById("ask-in"), q=inp.value.trim(); if(!q||!CURRENT) return;
+  const qaEl=document.getElementById("qa"); const x=CURRENT, token=x.a.account_id;
+  qaEl.innerHTML=`<div class="item"><div class="q">${escapeHTML(q)}</div><div class="a">${typingHTML()}</div></div>`;
+  inp.value="";
+  const text=await callCopilot({mode:"question",question:q,facts:factsPayload(x)});
+  if(CURRENT&&CURRENT.a.account_id!==token) return;
+  if(text){
+    qaEl.innerHTML=`<div class="item"><div class="q">${escapeHTML(q)}</div><div class="a">${escapeHTML(text)}</div></div>`;
+  }else{
+    // fallback: precomputed Q&A pairs for this account
+    qaEl.innerHTML=`<div style="font-size:11px;color:var(--mut);margin-bottom:4px">Live co-pilot unavailable — showing prepared answers for this account:</div>`+
+      x.cp.qa.map(p=>`<div class="item"><div class="q">${p.q}</div><div class="a">${p.a}</div></div>`).join("");
+  }
+}
+function markActioned(id){
+  actioned.add(id);
+  const btn=document.getElementById("markbtn");
+  if(btn){ btn.textContent="✓ Action taken"; btn.classList.add("done"); btn.disabled=true; }
+  toast(`Action logged — ${id} moved to Actioned`);
+  renderWatchlist();
+}
+function escapeHTML(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+/* boot */
+showTab("overview");
+</script>
+</body>
+</html>
